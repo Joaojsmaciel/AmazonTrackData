@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
                     
                     AppNavigation(
                         navController = navController,
-                        viewModel = authViewModel
+                        authViewModel = authViewModel
                     )
                 }
             }

@@ -14,9 +14,9 @@ import com.example.capdex.ui.viewmodel.AuthViewModel
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    viewModel: AuthViewModel
+    authViewModel: AuthViewModel
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by authViewModel.uiState.collectAsState()
     
     // Determina a tela inicial baseado no estado de autenticação
     val startDestination = if (uiState.isAuthenticated) {
@@ -31,7 +31,7 @@ fun AppNavigation(
     ) {
         composable(Screen.Login.route) {
             LoginScreen(
-                viewModel = viewModel,
+                viewModel = authViewModel,
                 onNavigateToSignUp = {
                     navController.navigate(Screen.SignUp.route) {
                         popUpTo(Screen.Login.route) { inclusive = false }
@@ -42,7 +42,7 @@ fun AppNavigation(
         
         composable(Screen.SignUp.route) {
             SignUpScreen(
-                viewModel = viewModel,
+                viewModel = authViewModel,
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.SignUp.route) { inclusive = true }
@@ -52,7 +52,7 @@ fun AppNavigation(
         }
         
         composable(Screen.Home.route) {
-            HomeScreen(viewModel = viewModel)
+            HomeScreen(authViewModel = authViewModel)
         }
     }
     

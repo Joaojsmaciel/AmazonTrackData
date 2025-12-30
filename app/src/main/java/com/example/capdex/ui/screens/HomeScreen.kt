@@ -1,24 +1,71 @@
 package com.example.capdex.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.capdex.ui.viewmodel.AuthViewModel
+import com.example.capdex.ui.viewmodel.LocationViewModel
 
 @Composable
 fun HomeScreen(
-    viewModel: AuthViewModel,
+    authViewModel: AuthViewModel,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val user = uiState.user
+    val context = LocalContext.current
+    val locationViewModel: LocationViewModel = viewModel()
+    
+    val authState by authViewModel.uiState.collectAsState()
+    val trackingState by locationViewModel.trackingState.collectAsState()
+    val user = authState.user
+    
+    // Launcher para permissões de localização
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        locationViewModel.updateLocationPermission(fineLocationGranted || coarseLocationGranted)
+    }
+    
+    // Launcher para permissão de notificação (Android 13+)
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        locationViewModel.updateNotificationPermission(granted)
+    }
+    
+    // Verifica permissões ao iniciar
+    LaunchedEffect(Unit) {
+        val hasLocationPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        
+        locationViewModel.updateLocationPermission(hasLocationPermission)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val hasNotificationPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            locationViewModel.updateNotificationPermission(hasNotificationPermission)
+        } else {
+            locationViewModel.updateNotificationPermission(true)
+        }
+    }
     
     Column(
         modifier = modifier
@@ -64,12 +111,98 @@ fun HomeScreen(
                     InfoRow(label = "Tipo", value = it.userType.displayName)
                 }
             }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Card de Rastreamento
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (trackingState.isTracking) 
+                        MaterialTheme.colorScheme.errorContainer 
+                    else 
+                        MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (trackingState.isTracking) 
+                            "🔴 Rastreamento Ativo" 
+                        else 
+                            "Rastreamento Inativo",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (trackingState.isTracking)
+                            MaterialTheme.colorScheme.onErrorContainer
+                        else
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = if (trackingState.isTracking)
+                            "Sua localização está sendo monitorada"
+                        else
+                            "Clique para iniciar o rastreamento",
+                        fontSize = 14.sp,
+                        color = if (trackingState.isTracking)
+                            MaterialTheme.colorScheme.onErrorContainer
+                        else
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Botão de Iniciar/Parar Rastreamento
+            Button(
+                onClick = {
+                    if (trackingState.isTracking) {
+                        locationViewModel.stopTracking(context)
+                    } else {
+                        // Verifica e solicita permissões
+                        if (!trackingState.hasLocationPermission) {
+                            locationPermissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                )
+                            )
+                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && 
+                                   !trackingState.hasNotificationPermission) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            locationViewModel.startTracking(context, it)
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (trackingState.isTracking)
+                        MaterialTheme.colorScheme.error
+                    else
+                        MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text(
+                    text = if (trackingState.isTracking) "Parar Rastreamento" else "Iniciar Rastreamento",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         
         OutlinedButton(
-            onClick = { viewModel.signOut() },
+            onClick = { authViewModel.signOut() },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Sair", fontSize = 16.sp)

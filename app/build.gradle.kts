@@ -7,9 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.capdex"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.capdex"
@@ -54,6 +52,9 @@ dependencies {
     
     // ViewModel
     implementation(libs.lifecycle.viewmodel.compose)
+    
+    // Location Services
+    implementation(libs.play.services.location)
     
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
