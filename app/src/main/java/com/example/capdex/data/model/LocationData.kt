@@ -2,6 +2,7 @@ package com.example.capdex.data.model
 
 data class LocationData(
     val userId: String = "",
+    val tripId: String = "", // ID único da viagem/trajeto
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val speed: Float = 0f, // em m/s

@@ -34,6 +34,7 @@ class LocationTrackingService : Service() {
     private var userId: String = ""
     private var userName: String = ""
     private var userType: String = ""
+    private var tripId: String = "" // ID único da viagem atual
     
     override fun onCreate() {
         super.onCreate()
@@ -54,7 +55,11 @@ class LocationTrackingService : Service() {
         }
         
         when (intent?.action) {
-            ACTION_START_TRACKING -> startLocationTracking()
+            ACTION_START_TRACKING -> {
+                // Gera um novo ID de viagem quando o rastreamento inicia
+                tripId = generateTripId()
+                startLocationTracking()
+            }
             ACTION_STOP_TRACKING -> stopLocationTracking()
         }
         
@@ -78,6 +83,7 @@ class LocationTrackingService : Service() {
                 locationResult.lastLocation?.let { location ->
                     val locationData = LocationData(
                         userId = userId,
+                        tripId = tripId,
                         latitude = location.latitude,
                         longitude = location.longitude,
                         speed = location.speed,
@@ -189,6 +195,11 @@ class LocationTrackingService : Service() {
     }
     
     override fun onBind(intent: Intent?): IBinder? = null
+    
+    private fun generateTripId(): String {
+        // Formato: userId_timestamp
+        return "${userId}_${System.currentTimeMillis()}"
+    }
     
     override fun onDestroy() {
         super.onDestroy()

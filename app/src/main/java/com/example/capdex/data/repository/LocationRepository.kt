@@ -39,6 +39,7 @@ class LocationRepository(context: Context) {
                 // Sem conexão: salva localmente
                 val cachedLocation = CachedLocationEntity(
                     userId = locationData.userId,
+                    tripId = locationData.tripId,
                     latitude = locationData.latitude,
                     longitude = locationData.longitude,
                     speed = locationData.speed,
@@ -58,6 +59,7 @@ class LocationRepository(context: Context) {
             try {
                 val cachedLocation = CachedLocationEntity(
                     userId = locationData.userId,
+                    tripId = locationData.tripId,
                     latitude = locationData.latitude,
                     longitude = locationData.longitude,
                     speed = locationData.speed,
@@ -88,6 +90,7 @@ class LocationRepository(context: Context) {
                 try {
                     val locationData = LocationData(
                         userId = cached.userId,
+                        tripId = cached.tripId,
                         latitude = cached.latitude,
                         longitude = cached.longitude,
                         speed = cached.speed,
