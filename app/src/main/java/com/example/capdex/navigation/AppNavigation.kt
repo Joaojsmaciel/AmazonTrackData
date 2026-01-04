@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.capdex.ui.screens.HomeScreen
 import com.example.capdex.ui.screens.LoginScreen
+import com.example.capdex.ui.screens.MapScreen
 import com.example.capdex.ui.screens.SignUpScreen
 import com.example.capdex.ui.viewmodel.AuthViewModel
 
@@ -20,7 +21,7 @@ fun AppNavigation(
     
     // Determina a tela inicial baseado no estado de autenticação
     val startDestination = if (uiState.isAuthenticated) {
-        Screen.Home.route
+        Screen.Map.route
     } else {
         Screen.Login.route
     }
@@ -51,18 +52,23 @@ fun AppNavigation(
             )
         }
         
-        composable(Screen.Home.route) {
-            HomeScreen(authViewModel = authViewModel)
+        composable(Screen.Map.route) {
+            MapScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                authViewModel = authViewModel
+            )
         }
     }
     
     // Observa mudanças no estado de autenticação e navega automaticamente
-    if (uiState.isAuthenticated && navController.currentDestination?.route != Screen.Home.route) {
-        navController.navigate(Screen.Home.route) {
+    if (uiState.isAuthenticated && navController.currentDestination?.route != Screen.Map.route) {
+        navController.navigate(Screen.Map.route) {
             popUpTo(0) { inclusive = true }
         }
     } else if (!uiState.isAuthenticated && 
-               navController.currentDestination?.route == Screen.Home.route) {
+               navController.currentDestination?.route == Screen.Map.route) {
         navController.navigate(Screen.Login.route) {
             popUpTo(0) { inclusive = true }
         }

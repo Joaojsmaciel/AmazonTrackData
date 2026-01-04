@@ -34,7 +34,7 @@ class LocationViewModel : ViewModel() {
             action = LocationTrackingService.ACTION_START_TRACKING
             putExtra(LocationTrackingService.EXTRA_USER_ID, user.uid)
             putExtra(LocationTrackingService.EXTRA_USER_NAME, user.fullName)
-            putExtra(LocationTrackingService.EXTRA_USER_TYPE, user.userType.name)
+            putExtra(LocationTrackingService.EXTRA_USER_TYPE, user.userType.displayName)
         }
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -50,7 +50,7 @@ class LocationViewModel : ViewModel() {
         val intent = Intent(context, LocationTrackingService::class.java).apply {
             action = LocationTrackingService.ACTION_STOP_TRACKING
         }
-        context.startService(intent)
+        context.stopService(intent)
         
         _trackingState.value = _trackingState.value.copy(isTracking = false)
     }

@@ -1,5 +1,6 @@
 package com.example.capdex.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.capdex.data.model.AuthResult
@@ -25,6 +26,8 @@ class AuthViewModel(
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
     
+    private var isManualAuthInProgress = false
+    
     init {
         checkAuthState()
         observeAuthChanges()
@@ -43,13 +46,21 @@ class AuthViewModel(
     private fun observeAuthChanges() {
         viewModelScope.launch {
             repository.observeAuthState().collect { firebaseUser ->
+                if (isManualAuthInProgress) {
+                    Log.d("AuthViewModel", "observeAuthChanges: Skipping - manual auth in progress")
+                    return@collect
+                }
+                
+                Log.d("AuthViewModel", "observeAuthChanges: firebaseUser = ${firebaseUser?.uid}")
                 if (firebaseUser == null) {
                     _uiState.value = AuthUiState(isAuthenticated = false)
                 } else {
                     val userData = repository.getCurrentUserData()
+                    Log.d("AuthViewModel", "observeAuthChanges: userData = ${userData?.email}")
                     _uiState.value = _uiState.value.copy(
                         user = userData,
-                        isAuthenticated = true
+                        isAuthenticated = true,
+                        isLoading = false
                     )
                 }
             }
@@ -64,6 +75,7 @@ class AuthViewModel(
         userType: UserType
     ) {
         viewModelScope.launch {
+            isManualAuthInProgress = true
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
             when (val result = repository.signUp(email, password, fullName, cpf, userType)) {
@@ -74,38 +86,51 @@ class AuthViewModel(
                         isAuthenticated = true,
                         errorMessage = null
                     )
+                    isManualAuthInProgress = false
                 }
                 is AuthResult.Error -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = result.message
                     )
+                    isManualAuthInProgress = false
                 }
-                else -> {}
+                else -> {
+                    isManualAuthInProgress = false
+                }
             }
         }
     }
     
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
+            isManualAuthInProgress = true
+            Log.d("AuthViewModel", "signIn: Starting login for $email")
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
             when (val result = repository.signIn(email, password)) {
                 is AuthResult.Success -> {
+                    Log.d("AuthViewModel", "signIn: Success - user = ${result.data.email}")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         user = result.data,
                         isAuthenticated = true,
                         errorMessage = null
                     )
+                    isManualAuthInProgress = false
                 }
                 is AuthResult.Error -> {
+                    Log.e("AuthViewModel", "signIn: Error - ${result.message}")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = result.message
                     )
+                    isManualAuthInProgress = false
                 }
-                else -> {}
+                else -> {
+                    Log.w("AuthViewModel", "signIn: Unknown result type")
+                    isManualAuthInProgress = false
+                }
             }
         }
     }

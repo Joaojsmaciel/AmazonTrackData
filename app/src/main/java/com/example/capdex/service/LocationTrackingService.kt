@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 class LocationTrackingService : Service() {
     
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val locationRepository = LocationRepository()
+    private lateinit var locationRepository: LocationRepository
     
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
@@ -37,6 +37,7 @@ class LocationTrackingService : Service() {
     
     override fun onCreate() {
         super.onCreate()
+        locationRepository = LocationRepository(applicationContext)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         createNotificationChannel()
     }
@@ -46,9 +47,20 @@ class LocationTrackingService : Service() {
         userName = intent?.getStringExtra(EXTRA_USER_NAME) ?: ""
         userType = intent?.getStringExtra(EXTRA_USER_TYPE) ?: ""
         
+        // Passageiro não precisa rastreamento - apenas para Mototaxi e Barqueiro
+        if (userType == "Passageiro") {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        
         when (intent?.action) {
             ACTION_START_TRACKING -> startLocationTracking()
             ACTION_STOP_TRACKING -> stopLocationTracking()
+        }
+        
+        // Tenta sincronizar dados pendentes ao iniciar
+        serviceScope.launch {
+            locationRepository.syncPendingLocations()
         }
         
         return START_STICKY
@@ -110,7 +122,9 @@ class LocationTrackingService : Service() {
     }
     
     private fun stopLocationTracking() {
-        fusedLocationClient.removeLocationUpdates(locationCallback)
+        if (::locationCallback.isInitialized) {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
+        }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }

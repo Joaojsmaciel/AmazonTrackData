@@ -22,6 +22,7 @@ import com.example.capdex.ui.viewmodel.LocationViewModel
 @Composable
 fun HomeScreen(
     authViewModel: AuthViewModel,
+    onNavigateToMap: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -114,6 +115,55 @@ fun HomeScreen(
             
             Spacer(modifier = Modifier.height(32.dp))
             
+            // Diferentes opções baseadas no tipo de usuário
+            if (it.userType.displayName == "Passageiro") {
+                // Passageiro só vê o botão de mapa
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "🗺️ Ver Mapa",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            text = "Visualize mototaxis e barqueiros disponíveis",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Button(
+                    onClick = onNavigateToMap,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text(
+                        text = "Abrir Mapa",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                // Mototaxi e Barqueiro têm rastreamento
             // Card de Rastreamento
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -196,6 +246,7 @@ fun HomeScreen(
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
+            }
             }
         }
         
