@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Círculo de fundo -->
+    <path
+        android:fillColor="#00BCD4"
+        android:pathData="M24,24m-22,0a22,22 0,1 1,44 0a22,22 0,1 1,-44 0"/>
+    <!-- Ícone de barco (simplificado) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M16,28l-4,4h24l-4,-4l-3,-3l-5,5l-5,-5L16,28zM24,17l3,6h-6L24,17zM12,15h24v2H12V15z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,33c0,1.1 2.24,2 5,2s5,-0.9 5,-2H10z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,33c0,1.1 2.24,2 5,2s5,-0.9 5,-2H28z"/>
+</vector>

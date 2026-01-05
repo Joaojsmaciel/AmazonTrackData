@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import com.example.capdex.MainActivity
@@ -58,9 +59,13 @@ class LocationTrackingService : Service() {
             ACTION_START_TRACKING -> {
                 // Gera um novo ID de viagem quando o rastreamento inicia
                 tripId = generateTripId()
+                Log.d("LocationService", "🚀 Nova viagem iniciada! TripId: $tripId")
                 startLocationTracking()
             }
-            ACTION_STOP_TRACKING -> stopLocationTracking()
+            ACTION_STOP_TRACKING -> {
+                Log.d("LocationService", "🛑 Rastreamento parado. TripId finalizado: $tripId")
+                stopLocationTracking()
+            }
         }
         
         // Tenta sincronizar dados pendentes ao iniciar
@@ -95,9 +100,20 @@ class LocationTrackingService : Service() {
                         userName = userName
                     )
                     
+                    Log.d("LocationService", "📍 Localização capturada - Lat: ${location.latitude}, Lng: ${location.longitude}, Speed: ${location.speed} m/s, TripId: $tripId")
+                    
                     // Salva no Firebase
                     serviceScope.launch {
-                        locationRepository.saveLocation(locationData)
+                        try {
+                            val result = locationRepository.saveLocation(locationData)
+                            if (result.isSuccess) {
+                                Log.d("LocationService", "✅ Processo de salvamento concluído!")
+                            } else {
+                                Log.e("LocationService", "❌ Erro ao salvar: ${result.exceptionOrNull()?.message}")
+                            }
+                        } catch (e: Exception) {
+                            Log.e("LocationService", "❌ Exceção ao salvar: ${e.message}", e)
+                        }
                     }
                     
                     // Atualiza notificação com velocidade

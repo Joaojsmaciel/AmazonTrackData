@@ -1,0 +1,150 @@
+🔥 REGRAS DO FIRESTORE - Importante Verificar!
+
+Para que o app consiga salvar localizações, você precisa configurar as regras do Firestore.
+
+📍 Como verificar/configurar:
+
+1. Acesse: https://console.firebase.google.com
+2. Selecione o projeto "fir-capdex"
+3. Vá em "Firestore Database"
+4. Clique na aba "Regras" (Rules)
+
+⚠️ PROBLEMA COMUM:
+Se suas regras estiverem assim:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;  ❌ ISSO BLOQUEIA TUDO!
+    }
+  }
+}
+```
+
+✅ SOLUÇÃO - Use estas regras (temporário para testes):
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Permite ler usuários apenas se autenticado
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Permite ler/escrever embarcações (boats)
+    match /boats/{boatId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+    }
+    
+    // Permite ler/escrever localizações se autenticado
+    match /locations/{userId}/tracks/{trackId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+
+🔒 REGRAS MAIS SEGURAS (recomendado para produção):
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Usuários
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Embarcações (boats) - apenas o dono pode modificar
+    match /boats/{boatId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && 
+                      request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null && 
+                              resource.data.ownerId == request.auth.uid;
+    }
+    
+    // Localizações - apenas o próprio usuário pode escrever suas localizações
+    match /locations/{userId}/tracks/{trackId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+🚀 MODO DESENVOLVIMENTO (NÃO USE EM PRODUÇÃO!):
+
+Se quiser apenas testar rapidamente:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;  // ⚠️ CUIDADO: Sem segurança!
+    }
+  }
+}
+```
+
+📦 REGRAS DO FIREBASE STORAGE:
+
+Acesse: https://console.firebase.google.com → Storage → Rules
+
+✅ Use estas regras para permitir upload de fotos:
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Fotos de embarcações - apenas usuários autenticados
+    match /boat_images/{imageId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Fotos de perfil
+    match /profile_images/{imageId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+
+🚀 Storage em MODO DESENVOLVIMENTO (teste rápido):
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
+
+📝 DEPOIS DE ALTERAR:
+1. Clique em "Publicar" (Publish)
+2. Aguarde alguns segundos
+3. Teste novamente o app
+
+💡 COMO SABER SE É PROBLEMA DE REGRAS:
+
+No Logcat, você verá algo como:
+❌ PERMISSION_DENIED: Missing or insufficient permissions
+❌ FirebaseFirestoreException: PERMISSION_DENIED
+❌ StorageException: User does not have permission (código 403)

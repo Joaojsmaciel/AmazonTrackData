@@ -3,11 +3,13 @@ package com.example.capdex.data.repository
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.util.Log
 import com.example.capdex.data.local.CachedLocationEntity
 import com.example.capdex.data.local.LocationDatabase
 import com.example.capdex.data.model.LocationData
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 
 class LocationRepository(context: Context) {
     
@@ -22,20 +24,39 @@ class LocationRepository(context: Context) {
     }
     
     suspend fun saveLocation(locationData: LocationData): Result<Unit> {
+        val hasInternet = isNetworkAvailable()
+        Log.d("LocationRepository", "🌐 Internet disponível: $hasInternet")
+        
         return try {
-            if (isNetworkAvailable()) {
-                // Tenta enviar diretamente ao Firebase
-                firestore.collection("locations")
-                    .document(locationData.userId)
-                    .collection("tracks")
-                    .add(locationData)
-                    .await()
+            if (hasInternet) {
+                Log.d("LocationRepository", "📤 Tentando enviar para Firebase...")
+                Log.d("LocationRepository", "   UserId: ${locationData.userId}")
+                Log.d("LocationRepository", "   TripId: ${locationData.tripId}")
+                
+                // Tenta enviar com timeout de 10 segundos
+                withTimeout(10000L) {
+                    firestore.collection("locations")
+                        .document(locationData.userId)
+                        .collection("tracks")
+                        .add(locationData)
+                        .await()
+                }
+                
+                Log.d("LocationRepository", "✅ SUCESSO! Enviado para Firebase! TripId: ${locationData.tripId}")
                 
                 // Sincroniza dados pendentes se houver
-                syncPendingLocations()
+                try {
+                    val synced = syncPendingLocations()
+                    if (synced > 0) {
+                        Log.d("LocationRepository", "📤 Sincronizados $synced dados pendentes")
+                    }
+                } catch (e: Exception) {
+                    Log.w("LocationRepository", "⚠️ Erro ao sincronizar pendentes: ${e.message}")
+                }
                 
                 Result.success(Unit)
             } else {
+                Log.w("LocationRepository", "📵 Sem internet - Salvando localmente")
                 // Sem conexão: salva localmente
                 val cachedLocation = CachedLocationEntity(
                     userId = locationData.userId,
@@ -52,9 +73,11 @@ class LocationRepository(context: Context) {
                     synced = false
                 )
                 locationDao.insert(cachedLocation)
+                Log.d("LocationRepository", "💾 Salvo localmente no Room")
                 Result.success(Unit)
             }
         } catch (e: Exception) {
+            Log.e("LocationRepository", "❌ Erro ao enviar para Firebase: ${e.message}", e)
             // Em caso de erro, salva localmente
             try {
                 val cachedLocation = CachedLocationEntity(
@@ -72,8 +95,10 @@ class LocationRepository(context: Context) {
                     synced = false
                 )
                 locationDao.insert(cachedLocation)
+                Log.d("LocationRepository", "💾 Salvo localmente após erro")
                 Result.success(Unit)
             } catch (localError: Exception) {
+                Log.e("LocationRepository", "❌❌ Erro crítico ao salvar localmente: ${localError.message}", localError)
                 Result.failure(localError)
             }
         }
